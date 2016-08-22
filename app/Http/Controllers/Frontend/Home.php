@@ -16,10 +16,8 @@ class Home extends Controller {
 
 
     public function index() {
-        $plans = Cache::rememberForever('plans',function(){
-            $plan = PlanModel::instance();
-            return $plan->getAll();
-        });
+        $plan = PlanModel::instance();
+        $plans = $plan->getAll();
 
         return view('frontend.home',[
             'plans' => $plans

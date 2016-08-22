@@ -7,11 +7,12 @@
 namespace App\Models\Rad;
 
 use Illuminate\Database\Eloquent\Model;
-use DB;
+use DB,Cache;
 
 class GroupCheck extends Model {
     protected $table = 'radgroupcheck';
     protected $guarded = ['id'];
+    protected static $cache_key = 'plans';
 
     /**
      *
@@ -67,7 +68,7 @@ class GroupCheck extends Model {
                     'value' => $plan['idletimeout']
                 ]
             ]);
-
+            Cache::forget(self::$cache_key);
             return DB::table('radgroupcheck')->insert($insert_data);
         });
     }
@@ -101,6 +102,11 @@ class GroupCheck extends Model {
     }
 
     public function getAll() {
+        $result = Cache::get(self::$cache_key);
+        if(!is_null($result)) {
+            return $result;
+        }
+
         $sql = "SELECT groupname,GROUP_CONCAT(radgroupcheck.attribute) AS attr,GROUP_CONCAT(radgroupcheck.value) AS val FROM radgroupcheck GROUP BY groupname ORDER BY id";
         $result = DB::select($sql);
 
@@ -113,6 +119,9 @@ class GroupCheck extends Model {
                 'detail' => array_combine($attrs,$vals)
             ]);
         }
+
+        Cache::forever(self::$cache_key,$_tmp);
+
         return $_tmp;
     }
 
@@ -121,6 +130,7 @@ class GroupCheck extends Model {
         return DB::transaction(function() use($groupname){
             DB::table("radgroupcheck")->where("groupname",$groupname)->delete();
             DB::table('radgroupreply')->where('groupname',$groupname)->delete();
+            Cache::forget(self::$cache_key);
             return true;
         });
     }
